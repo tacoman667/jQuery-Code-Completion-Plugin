@@ -21,16 +21,24 @@
 		this.bind('keydown', function(e) {
 			var self = $(this);
 			
-			// 32 == SpaceBar
+			// SpaceBar
 			if (e.keyCode == 32) {
 				log('Spacebar was pressed');
-				selectText(self, self.val().length, self.val().length); // Puts the cursor at the end of the input area
+				selectText(self, self.val().length, self.val().length);
 				return this;
 			}
 			
+			// Period
 			if (e.keyCode === 190) {
 				log('Period was pressed');
 				return replaceAndHighlightText($(this), options.keywords);
+			}
+			
+			// Enter
+			if (e.keyCode === 13) {
+				log('Enter was pressed');
+				replaceAndHighlightText($(this), options.keywords);
+				$(this).val($(this).val() + " ");
 			}
 		});
 		
@@ -84,7 +92,3 @@ function log(message) {
 	if (console)
 		console.log(message);
 }
-
-$(document).ready(function() {
-	jQuery("#source").code();
-});
