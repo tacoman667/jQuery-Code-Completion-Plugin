@@ -1,5 +1,5 @@
 (function($) {
-	$.fn.code = function(options) {
+	$.fn.codeComplete = function(options) {
 	
 		options = $.extend({
 			keywords: [ "if" , "else" , "orelse" , 'firstname' , 'firstname.tostring']
