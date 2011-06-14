@@ -13,7 +13,7 @@
 	
 		options = $.extend({
 			model: {
-				keywords: [ 'if', 'else', 'orelse', 'and', 'not', '<>', '=', '<', '>' ],
+				keywords: [ 'if', 'else', 'orelse', 'and', 'not' ],
 				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ],
 				members: [ { name: 'firstname', type: 'string' } ]
 			}
@@ -39,13 +39,12 @@
 			if (e.keyCode == 32) {
 				log('Spacebar was pressed');
 				selectText(self, self.val().length, self.val().length);
-				return this;
 			}
 			
 			// Period
 			if (e.keyCode === 190) {
 				log('Period was pressed');
-				return executeCodeCompletion($(this), options.model);
+				executeCodeCompletion($(this), options.model);
 			}
 			
 			// Enter
@@ -72,21 +71,44 @@ function executeCodeCompletion(self, model) {
 	evaluateKeywords(self, lastWord, model.keywords);
 	
 	// Evaluate model.members
-	
+	evaluateMembers(self, lastWord, model);
 	
 	// Evaluate model.dataTypes
 	
 	return self;
 }
 
-function evaluateKeywords(self, lastWord, keywords) {
-	for (var i in model.keywords) {
+function evaluateMembers(self, lastWord, model) {
+	var members = [];
+	for (var i in model.members) {
+		members.push(model.members[i].name);
+	}
+	
+	for (var i in members) {
+		if (typeof members[i] === 'function') continue;
+		
 		var pattern = new RegExp('^' + lastWord);
-		var isMatch = pattern.test(model.keywords[i]);
+		var isMatch = pattern.test(members[i]);
 		
 		if (isMatch) {
-			log('Keyword matched with: ' + model.keywords[i]);
-			replaceTextAndHighlight(self, lastWord, model.keywords[i]);
+			log('Keyword matched with: ' + members[i]);
+			replaceTextAndHighlight(self, lastWord, members[i]);
+		}
+	}
+	
+	return self;
+}
+
+function evaluateKeywords(self, lastWord, keywords) {
+	for (var i in keywords) {
+		if (typeof keywords[i] === 'function') continue;
+		
+		var pattern = new RegExp('^' + lastWord);
+		var isMatch = pattern.test(keywords[i]);
+		
+		if (isMatch) {
+			log('Keyword matched with: ' + keywords[i]);
+			replaceTextAndHighlight(self, lastWord, keywords[i]);
 		}
 	}
 	
@@ -123,4 +145,12 @@ function selectText(element, start, end) {
 function log(message) {
 	if (console)
 		console.log(message);
+}
+
+Array.prototype.contains = function(value) {
+	for (var i in this) {
+		if (this[i] === value)
+			return true;
+	}
+	return false;
 }
