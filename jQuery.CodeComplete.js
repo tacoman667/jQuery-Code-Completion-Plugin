@@ -54,6 +54,7 @@
 				executeCodeCompletion($(this), options.model);
 				$(this).val($(this).val() + " ");
 			}
+			
 		});
 		
 		return this;
@@ -68,19 +69,26 @@ function executeCodeCompletion(self, model) {
 	if (lastWord.length === 0) return self;																							// Doesn't evaluate keywords on a space
 	
 	// Evaluate model.keywords
-	for (var i = 0; i < model.keywords.length; i++) {
+	evaluateKeywords(self, lastWord, model.keywords);
+	
+	// Evaluate model.members
+	
+	
+	// Evaluate model.dataTypes
+	
+	return self;
+}
+
+function evaluateKeywords(self, lastWord, keywords) {
+	for (var i in model.keywords) {
 		var pattern = new RegExp('^' + lastWord);
 		var isMatch = pattern.test(model.keywords[i]);
 		
 		if (isMatch) {
 			log('Keyword matched with: ' + model.keywords[i]);
-			return replaceTextAndHighlight(self, lastWord, model.keywords[i]);
+			replaceTextAndHighlight(self, lastWord, model.keywords[i]);
 		}
 	}
-	
-	// Evaluate model.members
-	
-	// Evaluate model.dataTypes
 	
 	return self;
 }
