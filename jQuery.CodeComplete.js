@@ -1,10 +1,11 @@
 
 /*
 	model: {
-		keywords: <Array of String values>,
-		dataTypes: <Array of key/value pairs> ex. [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ],
-		members: <Array of key/value pairs of type String> ex. [ { name: 'firstname', type: 'string' } ]
+		keywords: <Array of key/value pairs of type String> ex. [ { name: 'if', type: '' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' } ],
+		dataTypes: <Array of key/value pairs> ex. [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ]
 	}
+	
+	keywords do not need a value for type as it will be checked against datatypes property when a period is pressed.
 */
 
 function selectText(element, start, end) {
@@ -50,37 +51,18 @@ function replaceTextAndHighlight(self, lastWord, newWord) {
 	return self;
 }
 
-function evaluateMembers(self, lastWord, model) {
-	var members = [];
-	for (var i in model.members) {
-		members.push(model.members[i].name);
-	}
-	
-	for (var i in members) {
-		if (typeof members[i] === 'function') { continue; }
+function evaluateKeywords(self, lastWord, model) {
+	log('evaluateKeywords method was executed.');
+	for (var i in model.keywords) {
+		log('Keyword to be evaluated: ' + model.keywords[i].name);
+		if (typeof model.keywords[i].name === 'function') { continue; }
 		
 		var pattern = new RegExp('^' + lastWord);
-		var isMatch = pattern.test(members[i]);
+		var isMatch = pattern.test(model.keywords[i].name);
 		
 		if (isMatch) {
-			log('Keyword matched with: ' + members[i]);
-			replaceTextAndHighlight(self, lastWord, members[i]);
-		}
-	}
-	
-	return self;
-}
-
-function evaluateKeywords(self, lastWord, keywords) {
-	for (var i in keywords) {
-		if (typeof keywords[i] === 'function') { continue; }
-		
-		var pattern = new RegExp('^' + lastWord);
-		var isMatch = pattern.test(keywords[i]);
-		
-		if (isMatch) {
-			log('Keyword matched with: ' + keywords[i]);
-			replaceTextAndHighlight(self, lastWord, keywords[i]);
+			log('Keyword matched with: ' + model.keywords[i].name);
+			replaceTextAndHighlight(self, lastWord, model.keywords[i].name);
 		}
 	}
 	
@@ -95,10 +77,7 @@ function executeCodeCompletion(self, model) {
 	if (lastWord.length === 0) { return self;	}																						// Doesn't evaluate keywords on a space
 	
 	// Evaluate model.keywords
-	evaluateKeywords(self, lastWord, model.keywords);
-	
-	// Evaluate model.members
-	evaluateMembers(self, lastWord, model);
+	evaluateKeywords(self, lastWord, model);
 	
 	// Evaluate model.dataTypes
 	
@@ -110,9 +89,8 @@ function executeCodeCompletion(self, model) {
 	
 		options = $.extend({
 			model: {
-				keywords: [ 'if', 'else', 'orelse', 'and', 'not' ],
-				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ],
-				members: [ { name: 'firstname', type: 'string' } ]
+				keywords: [ { name: 'if', type: '' }, { name: 'else', type: '' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' } ],
+				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ]
 			}
 		}, options);
 		options.model.keywords.sort();
