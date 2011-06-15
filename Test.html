@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+
+<html>
+	<head>
+		<style>
+			.source {
+				width:300px;
+				height:100px;
+			}
+		</style>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+		<script type="text/javascript" src="jquery.codecomplete.js"></script>
+		
+		<script>
+		
+			var model = {
+				keywords: [ 'if', 'else', 'orelse', 'and', 'not' ],
+				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ],
+				members: [ { name: 'firstname', type: 'string' } ]
+			};
+		
+			$(document).ready(function() {
+				jQuery("#source").codeComplete({ model: model });
+			});
+			
+		</script>
+	</head>
+
+	<body>
+	
+		<textarea id='source' class="source"></textarea>
+	
+	</body>
+
+</html>
