@@ -1,7 +1,7 @@
 
 /*
 	model: {
-		keywords: <Array of key/value pairs of type String> ex. [ { name: 'if', type: '' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' } ],
+		keywords: <Array of key/value pairs of type String> ex. [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' } ],
 		dataTypes: <Array of key/value pairs> ex. [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ]
 	}
 	
@@ -53,17 +53,46 @@ function replaceTextAndHighlight(self, lastWord, newWord) {
 
 function evaluateKeywords(self, lastWord, model) {
 	log('evaluateKeywords method was executed.');
+	var matches = [];
+	
 	for (var i in model.keywords) {
-		log('Keyword to be evaluated: ' + model.keywords[i].name);
-		if (typeof model.keywords[i].name === 'function') { continue; }
+		var keyword = model.keywords[i];
+		
+		log('Keyword to be evaluated: ' + keyword.name);
+		if (typeof keyword.name === 'function') { continue; }
 		
 		var pattern = new RegExp('^' + lastWord);
-		var isMatch = pattern.test(model.keywords[i].name);
+		var isMatch = pattern.test(keyword.name);
 		
 		if (isMatch) {
-			log('Keyword matched with: ' + model.keywords[i].name);
-			replaceTextAndHighlight(self, lastWord, model.keywords[i].name);
+			if (model.dataTypes.contains(keyword.type)) {
+				// Checks the datatypes for match and then adds the methods to the matches array
+				for (var x in model.dataTypes) {
+					var dataType = model.dataTypes[x];
+					var pattern = new RegExp('^' + lastWord);
+					var isDataTypeMatch = pattern.test(dataType.type);
+					if (isDataTypeMatch) {
+						// TODO
+					}
+				}
+			}
+			else {
+				// Ads keyword to the matches array
+				matches.push(keyword.name);
+			}
 		}
+	}
+	
+	if (matches.length > 0)
+		replaceTextAndHighlight(self, lastWord, matches[0]);
+	
+	
+	// Tracing only
+	$("#matches").val('');
+	for (var match in matches) {
+		var val = $("#matches").val();
+		if (typeof matches[match] === 'function') { continue; }
+		$("#matches").val(val + '\n' + matches[match]);
 	}
 	
 	return self;
@@ -79,8 +108,6 @@ function executeCodeCompletion(self, model) {
 	// Evaluate model.keywords
 	evaluateKeywords(self, lastWord, model);
 	
-	// Evaluate model.dataTypes
-	
 	return self;
 }
 
@@ -89,7 +116,7 @@ function executeCodeCompletion(self, model) {
 	
 		options = $.extend({
 			model: {
-				keywords: [ { name: 'if', type: '' }, { name: 'else', type: '' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' } ],
+				keywords: [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' } ],
 				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ]
 			}
 		}, options);

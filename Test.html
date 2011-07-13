@@ -21,6 +21,7 @@
 		
 			$(document).ready(function() {
 				jQuery("#source").codeComplete();
+				jQuery("textarea").width(300).height(300).first().focus();
 			});
 			
 		</script>
@@ -29,7 +30,7 @@
 	<body>
 	
 		<textarea id='source' class="source"></textarea>
-	
+		<textarea id="matches"></textarea>
 	</body>
 
 </html>
