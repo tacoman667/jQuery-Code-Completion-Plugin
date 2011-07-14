@@ -104,9 +104,11 @@ function evaluateTypes(self, lastWord, model) {
 	
 	//autoComplete(self, lastWord, matches);
 	
-	populateSelect(matches, self);
+	if (matches.length > 0) {
+		populateSelect(matches, self);
+	}
 	
-	return self;
+	return matches;
 }
 
 function evaluateKeywords(self, lastWord, model) {
@@ -123,6 +125,7 @@ function evaluateKeywords(self, lastWord, model) {
 }
 
 function autoComplete(self, wordToMatch, keywords) {
+	var matches = [];
 	for (var i in keywords) {
 		var keyword = keywords[i];
 		
@@ -134,8 +137,10 @@ function autoComplete(self, wordToMatch, keywords) {
 		
 		if (isMatch) {
 			replaceTextAndHighlight(self, wordToMatch, keyword);
+			matches.push(keyword);
 		}
 	}
+	
 }
 
 function executeCodeCompletion(self, model, forDataTypes) {
@@ -151,7 +156,10 @@ function executeCodeCompletion(self, model, forDataTypes) {
 		evaluateKeywords(self, lastWord, model);
 	}
 	else {
-		evaluateTypes(self, lastWord, model);
+		// if returning matches length is greater then 0 then add the period
+		if (evaluateTypes(self, lastWord, model).length > 0) {
+			self.appendText('.');
+		}
 	}
 	
 	return self;
@@ -172,16 +180,6 @@ function executeCodeCompletion(self, model, forDataTypes) {
 			log('Key ANSII Code: ' + e.keyCode);
 			if (e.keyCode === 8) { return this; }
 			
-			
-			// Period
-			if (e.keyCode === 190) {
-				log('Period was pressed');
-				selectText(self, self.valLength(), self.valLength());
-				executeCodeCompletion($(this), model, true);
-				self.appendText('.');
-				return;
-			}
-			
 			return executeCodeCompletion($(this), model);
 		});
 		
@@ -199,6 +197,13 @@ function executeCodeCompletion(self, model, forDataTypes) {
 				log('Enter was pressed');
 				executeCodeCompletion($(this), model);
 				$(this).appendText(" ");
+			}
+			
+			// Period
+			if (e.keyCode === 190) {
+				log('Period was pressed');
+				selectText(self, self.valLength(), self.valLength());
+				executeCodeCompletion($(this), model, true);
 			}
 			
 		});
