@@ -9,20 +9,20 @@
 */
 
 function populateSelect(items, codeTextArea) {
-    var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body")).get(0);
+    var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body"));
 	
 	jQuery.each(items, function () {
-        select.options[select.options.length] = new Option(this, this);
+        select.get(0).options[select.get(0).options.length] = new Option(this, this);
     });
-	jQuery(select).attr('size', 3).bind('keyup', function (e) {
+	select.attr('size', 3).bind('keyup', function (e) {
 		if (e.keyCode == 13) {
-			codeTextArea.val(codeTextArea.val() + jQuery(this).val());
+			codeTextArea.appendText(jQuery(this).val());
 			jQuery(this).remove();
-			codeTextArea.focus().val(codeTextArea.val() + " ");
-			selectText(codeTextArea, codeTextArea.val().length, codeTextArea.val().length);
+			codeTextArea.focus().appendText(" ");
+			selectText(codeTextArea, codeTextArea.valLength(), codeTextArea.valLength());
 		}
 	});
-	jQuery(select).focus();
+	select.focus();
 }
 
 function selectText(element, start, end) {
@@ -64,11 +64,11 @@ Array.prototype.contains = function (value) {
 }
 
 function replaceTextAndHighlight(self, lastWord, newWord) {
-	var valueLessLastWord = self.val().substring(0, (self.val().length - lastWord.length));
+	var valueLessLastWord = self.val().substring(0, (self.valLength() - lastWord.length));
 	self.val(valueLessLastWord + newWord);
 	
 	var start = valueLessLastWord.length + lastWord.length;														// Set start of the highlight
-	var end = self.val().length;																									// Set end of the highlight
+	var end = self.valLength();																									// Set end of the highlight
 	
 	selectText(self, start, end);																									// Set the selected text to the remainder of the letters from what was actually input
 	return self;
@@ -139,8 +139,8 @@ function autoComplete(self, wordToMatch, keywords) {
 }
 
 function executeCodeCompletion(self, model, forDataTypes) {
-	var words = self.val().split(" ");
-	var lastWord = words[words.length - 1];
+	var words = self.val().split(/[\s\(\)]/);
+	var lastWord = words[words.length-1];
 	log('Last Word: ' + lastWord);
 	
 	// Doesn't evaluate keywords on a space
@@ -158,23 +158,31 @@ function executeCodeCompletion(self, model, forDataTypes) {
 }
 
 (function($) {
-	$.fn.codeComplete = function (options) {
+	$.fn.codeComplete = function (model) {
 	
-		options = $.extend({
-			model: {
-				keywords: [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' } ],
-				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ]
-			}
-		}, options);
-		options.model.keywords.sort();
+		model = $.extend({
+			//keywords: [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int32' } ],
+			//dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int32', methods: [ 'tostring' ] } ]
+		}, model);
+		model.keywords.sort();
 		
-		this.data("model", options.model);
+		this.data("model", model);
 		
 		this.bind("keyup", function(e) {
 			log('Key ANSII Code: ' + e.keyCode);
 			if (e.keyCode === 8) { return this; }
 			
-			return executeCodeCompletion($(this), options.model);
+			
+			// Period
+			if (e.keyCode === 190) {
+				log('Period was pressed');
+				selectText(self, self.valLength(), self.valLength());
+				executeCodeCompletion($(this), model, true);
+				self.appendText('.');
+				return;
+			}
+			
+			return executeCodeCompletion($(this), model);
 		});
 		
 		this.bind('keydown', function(e) {
@@ -183,26 +191,28 @@ function executeCodeCompletion(self, model, forDataTypes) {
 			// SpaceBar
 			if (e.keyCode === 32) {
 				log('Spacebar was pressed');
-				selectText(self, self.val().length, self.val().length);
-			}
-			
-			// Period
-			if (e.keyCode === 190) {
-				log('Period was pressed');
-				selectText(self, self.val().length, self.val().length);
-				executeCodeCompletion($(this), options.model, true);
-				self.val(self.val() + '.');
+				selectText(self, self.valLength(), self.valLength());
 			}
 			
 			// Enter
 			if (e.keyCode === 13) {
 				log('Enter was pressed');
-				executeCodeCompletion($(this), options.model);
-				$(this).val($(this).val() + " ");
+				executeCodeCompletion($(this), model);
+				$(this).appendText(" ");
 			}
 			
 		});
 		
 		return this;
 	};
+	
+	$.fn.appendText = function(text) {
+		this.val(function(index, value) {
+			return value + text;
+		});
+	};
+	
+	$.fn.valLength = function() {
+		return this.val().length;
+	}
 })(jQuery);
