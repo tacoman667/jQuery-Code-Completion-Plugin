@@ -8,6 +8,23 @@
 	keywords do not need a value for type as it will be checked against datatypes property when a period is pressed.
 */
 
+function populateSelect(items, codeTextArea) {
+    var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body")).get(0);
+	
+	jQuery.each(items, function () {
+        select.options[select.options.length] = new Option(this, this);
+    });
+	jQuery(select).attr('size', 3).bind('keyup', function (e) {
+		if (e.keyCode == 13) {
+			codeTextArea.val(codeTextArea.val() + jQuery(this).val());
+			jQuery(this).remove();
+			codeTextArea.focus().val(codeTextArea.val() + " ");
+			selectText(codeTextArea, codeTextArea.val().length, codeTextArea.val().length);
+		}
+	});
+	jQuery(select).focus();
+}
+
 function selectText(element, start, end) {
 	"use strict";
 	if (element[0].createTextRange) {
@@ -34,8 +51,14 @@ function log(message) {
 
 Array.prototype.contains = function (value) {
 	for (var i in this) {
-		if (this[i] === value)
-			return true;
+		if (this[i].type) { // This is to test the dataType array
+			if (this[i].type === value)
+				return true;
+		}
+		else {
+			if (this[i] === value)
+				return true;
+		}
 	}
 	return false;
 }
@@ -51,8 +74,7 @@ function replaceTextAndHighlight(self, lastWord, newWord) {
 	return self;
 }
 
-function evaluateKeywords(self, lastWord, model) {
-	log('evaluateKeywords method was executed.');
+function evaluateTypes(self, lastWord, model) {
 	var matches = [];
 	
 	for (var i in model.keywords) {
@@ -65,48 +87,72 @@ function evaluateKeywords(self, lastWord, model) {
 		var isMatch = pattern.test(keyword.name);
 		
 		if (isMatch) {
-			if (model.dataTypes.contains(keyword.type)) {
-				// Checks the datatypes for match and then adds the methods to the matches array
-				for (var x in model.dataTypes) {
-					var dataType = model.dataTypes[x];
-					var pattern = new RegExp('^' + lastWord);
-					var isDataTypeMatch = pattern.test(dataType.type);
-					if (isDataTypeMatch) {
-						// TODO
+			// Checks the datatypes for match and then adds the methods to the matches array
+			for (var x in model.dataTypes) {
+				var dataType = model.dataTypes[x];
+				var isDataTypeMatch = keyword.type === dataType.type;
+				if (isDataTypeMatch) {
+					for (var y in dataType.methods) {
+						var method = dataType.methods[y];
+						if (typeof method === 'function') { continue; }
+						matches.push(method);
 					}
 				}
-			}
-			else {
-				// Ads keyword to the matches array
-				matches.push(keyword.name);
 			}
 		}
 	}
 	
-	if (matches.length > 0)
-		replaceTextAndHighlight(self, lastWord, matches[0]);
+	//autoComplete(self, lastWord, matches);
 	
-	
-	// Tracing only
-	$("#matches").val('');
-	for (var match in matches) {
-		var val = $("#matches").val();
-		if (typeof matches[match] === 'function') { continue; }
-		$("#matches").val(val + '\n' + matches[match]);
-	}
+	populateSelect(matches, self);
 	
 	return self;
 }
 
-function executeCodeCompletion(self, model) {
+function evaluateKeywords(self, lastWord, model) {
+	log('evaluateKeywords method was executed.');
+	
+	var keywords = [];
+	for (var i in model.keywords) {
+		keywords.push(model.keywords[i].name);
+	}
+	
+	autoComplete(self, lastWord, keywords);
+	
+	return self;
+}
+
+function autoComplete(self, wordToMatch, keywords) {
+	for (var i in keywords) {
+		var keyword = keywords[i];
+		
+		log('Keyword to be evaluated: ' + keyword);
+		if (typeof keyword === 'function') { continue; }
+		
+		var pattern = new RegExp('^' + wordToMatch);
+		var isMatch = pattern.test(keyword);
+		
+		if (isMatch) {
+			replaceTextAndHighlight(self, wordToMatch, keyword);
+		}
+	}
+}
+
+function executeCodeCompletion(self, model, forDataTypes) {
 	var words = self.val().split(" ");
 	var lastWord = words[words.length - 1];
 	log('Last Word: ' + lastWord);
 	
-	if (lastWord.length === 0) { return self;	}																						// Doesn't evaluate keywords on a space
+	// Doesn't evaluate keywords on a space
+	if (lastWord.length === 0) { return self;	}
 	
-	// Evaluate model.keywords
-	evaluateKeywords(self, lastWord, model);
+	if (!forDataTypes) {
+		// Evaluate model.keywords
+		evaluateKeywords(self, lastWord, model);
+	}
+	else {
+		evaluateTypes(self, lastWord, model);
+	}
 	
 	return self;
 }
@@ -143,7 +189,9 @@ function executeCodeCompletion(self, model) {
 			// Period
 			if (e.keyCode === 190) {
 				log('Period was pressed');
-				executeCodeCompletion($(this), options.model);
+				selectText(self, self.val().length, self.val().length);
+				executeCodeCompletion($(this), options.model, true);
+				self.val(self.val() + '.');
 			}
 			
 			// Enter

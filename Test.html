@@ -13,14 +13,13 @@
 		
 		<script>
 		
-			/*var model = {
-				keywords: [ 'if', 'else', 'orelse', 'and', 'not' ],
-				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ],
-				members: [ { name: 'firstname', type: 'string' } ]
-			};*/
+			var model = {
+				keywords: [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' } ],
+				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] } ]
+			};
 		
 			$(document).ready(function() {
-				jQuery("#source").codeComplete();
+				jQuery("#source").codeComplete(model);
 				jQuery("textarea").width(300).height(300).first().focus();
 			});
 			
@@ -30,7 +29,7 @@
 	<body>
 	
 		<textarea id='source' class="source"></textarea>
-		<textarea id="matches"></textarea>
+		
 	</body>
 
 </html>
