@@ -8,21 +8,39 @@
 	keywords do not need a value for type as it will be checked against datatypes property when a period is pressed.
 */
 
-function populateSelect(items, codeTextArea) {
+function populateSelect(items, codeTextArea, withFocus) {
     var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body"));
 	
 	jQuery.each(items, function () {
         select.get(0).options[select.get(0).options.length] = new Option(this, this);
     });
 	select.attr('size', 3).bind('keyup', function (e) {
-		if (e.keyCode == 13) {
+		if (e.keyCode == 13 || e.keyCode == 32) {
 			codeTextArea.appendText(jQuery(this).val());
 			jQuery(this).remove();
 			codeTextArea.focus().appendText(" ");
 			selectText(codeTextArea, codeTextArea.valLength(), codeTextArea.valLength());
 		}
 	});
-	select.focus();
+	
+	if (withFocus) {
+		select.focus();
+	}
+	
+}
+
+function clearSelectedText() {
+	if (window.getSelection) {
+		if (window.getSelection().empty) {  // Chrome
+			window.getSelection().empty();
+		} 
+		else if (window.getSelection().removeAllRanges) {  // Firefox
+			window.getSelection().removeAllRanges();
+		}
+	} 
+	else if (document.selection) {  // IE
+		document.selection.empty();
+	}
 }
 
 function selectText(element, start, end) {
@@ -105,7 +123,7 @@ function evaluateTypes(self, lastWord, model) {
 	//autoComplete(self, lastWord, matches);
 	
 	if (matches.length > 0) {
-		populateSelect(matches, self);
+		populateSelect(matches, self, true);
 	}
 	
 	return matches;
@@ -119,7 +137,11 @@ function evaluateKeywords(self, lastWord, model) {
 		keywords.push(model.keywords[i].name);
 	}
 	
-	autoComplete(self, lastWord, keywords);
+	var matches = autoComplete(self, lastWord, keywords);
+	if (matches.length > 1) {
+		// TODO
+		//populateSelect(matches, self, false);
+	}
 	
 	return self;
 }
@@ -136,11 +158,15 @@ function autoComplete(self, wordToMatch, keywords) {
 		var isMatch = pattern.test(keyword);
 		
 		if (isMatch) {
-			replaceTextAndHighlight(self, wordToMatch, keyword);
 			matches.push(keyword);
 		}
 	}
 	
+	if (matches.length > 0) {
+		replaceTextAndHighlight(self, wordToMatch, matches[0]);
+	}
+	
+	return matches;
 }
 
 function executeCodeCompletion(self, model, forDataTypes) {
