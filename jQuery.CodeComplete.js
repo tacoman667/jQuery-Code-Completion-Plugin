@@ -15,7 +15,7 @@ function populateSelect(items, codeTextArea, withFocus) {
     });
     select.attr('size', 3).bind('keyup', function (e) {
         if (e.keyCode == 13 || e.keyCode == 32) {
-            codeTextArea.appendText(jQuery(this).val());
+            codeTextArea.appendText(jQuery(this).val()); // TODO make this insert at cursor instead of the end of the textarea.val()
             jQuery(this).remove();
             codeTextArea.focus();
             selectText(codeTextArea, codeTextArea.valLength(), codeTextArea.valLength());
@@ -62,7 +62,7 @@ function selectText(element, start, end) {
 function log(message) {
     "use strict";
     if (console) {
-        console.log(message);
+        //console.log(message);
     }
 }
 
@@ -82,7 +82,7 @@ Array.prototype.contains = function (value) {
 
 function replaceTextAndHighlight(self, lastWord, newWord) {
     var valueLessLastWord = self.val().substring(0, (self.valLength() - lastWord.length));
-    self.val(valueLessLastWord + newWord);
+    self.val(valueLessLastWord + newWord);  // TODO make this insert at cursor instead of the end of the textarea.val()
     
     var start = valueLessLastWord.length + lastWord.length;                                                        // Set start of the highlight
     var end = self.valLength();                                                                                                    // Set end of the highlight
@@ -182,7 +182,7 @@ function executeCodeCompletion(self, model, forDataTypes) {
     else {
         // if returning matches length is greater then 0 then add the period
         if (evaluateTypes(self, lastWord, model).length > 0) {
-            self.appendText('.');
+            self.appendText('.');   // TODO make this insert at cursor instead of the end of the textarea.val()
         }
     }
     
@@ -190,7 +190,7 @@ function executeCodeCompletion(self, model, forDataTypes) {
 }
 
 function getWord(elem) {
-    var location = getCaret($(elem).get(0));
+    var location = getCaret(elem);
     
     // letters will be reversed
     var temp = "";
@@ -209,7 +209,9 @@ function getWord(elem) {
     return word;
 }
 
-function getCaret(el) { 
+function getCaret(elem) { 
+  var el = $(elem).get(0);
+  
   if (el.selectionStart) { 
     return el.selectionStart; 
   } else if (document.selection) { 
@@ -238,6 +240,25 @@ function reverseText(text) {
     return word;
 }
 
+function insertAtCursor(myField, myValue) {
+	//IE support
+	if (document.selection) {
+		myField.focus();
+		sel = document.selection.createRange();
+		sel.text = myValue;
+	}
+	//MOZILLA/NETSCAPE support
+	else if (myField.selectionStart || myField.selectionStart == '0') {
+		var startPos = myField.selectionStart;
+		var endPos = myField.selectionEnd;
+		myField.value = myField.value.substring(0, startPos)
+					  + myValue
+					  + myField.value.substring(endPos, myField.value.length);
+	} else {
+		myField.value += myValue;
+	}
+}
+
 (function($) {
     $.fn.codeComplete = function (model) {
     
@@ -245,8 +266,12 @@ function reverseText(text) {
             //keywords: [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int32' } ],
             //dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int32', methods: [ 'tostring' ] } ]
         }, model);
-        model.keywords.sort();
         
+        model.keywords.sort(function(a, b) { 
+			if (a.name === b.name) { return 0; }
+			return (a.name < b.name) ? -1 : 1; 
+		});
+		
         this.data("model", model);
         
         this.bind("keyup", function(e) {
@@ -269,7 +294,7 @@ function reverseText(text) {
             if (e.keyCode === 13) {
                 log('Enter was pressed');
                 executeCodeCompletion($(this), model);
-                $(this).appendText(" ");
+                $(this).appendText(" ");   // TODO make this insert at cursor instead of the end of the textarea.val()
             }
             
             // Period
@@ -285,9 +310,13 @@ function reverseText(text) {
     };
     
     $.fn.appendText = function(text) {
+		/*var location = getCaret(this);
+		var word = getWord(this);*/
         this.val(function(index, value) {
             return value + text;
         });
+		/*clearSelectedText(this);
+		insertAtCursor(this.get(0), text);*/
     };
     
     $.fn.valLength = function() {

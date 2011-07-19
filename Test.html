@@ -13,23 +13,35 @@
 		
 		<script>
 		
-			var model = {
-				keywords: [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' }, { name: 'description', type: 'string' }, { name: 'documentcode', type: 'documentcode' }, { name: 'packet', type: 'packet' } ],
-				dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] }, { type: 'documentcode', methods: [ 'I9', 'W2', 'DirectDeposit' ] }, { type: 'packet', methods: [ 'add' ] } ]
-			};
-		
+			/*var model = {
+				"keywords": [ { name: 'if', type: 'syntax' }, { name: 'else', type: 'syntax' }, { name: 'firstname', type: 'string' }, { name: 'age', type: 'int' }, { name: 'description', type: 'string' }, { name: 'documentcode', type: 'documentcode' }, { name: 'packet', type: 'packet' } ],
+				"dataTypes": [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int', methods: [ 'tostring' ] }, { type: 'documentcode', methods: [ 'I9', 'W2', 'DirectDeposit' ] }, { type: 'packet', methods: [ 'add' ] } ]
+			};*/
+			
+			jQuery.ajax({
+				url: 'http://localhost:62619/CodeComplete/GetModel',
+				data: { dataSourceName: 'Enrollment', packetCode: 'DEBPACKET', packetVersion: 3 },
+				dataType: "jsonp",
+				crossDomain: true,
+				success: function(data) {
+					jQuery("#source").codeComplete(data);
+				},
+				error: function (response) {
+					alert(response.status);
+				}
+			});
+			
 			$(document).ready(function() {
-				jQuery("#source").codeComplete(model);
 				jQuery("textarea").width(300).height(300).first().focus();
+				//jQuery("#source").codeComplete(model);
 			});
 			
 		</script>
 	</head>
 
 	<body>
-	
 		<textarea id='source' class="source"></textarea>
-		
+		<div id='trace' />
 	</body>
 
 </html>
