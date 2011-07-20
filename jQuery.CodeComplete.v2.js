@@ -9,14 +9,17 @@
 
 function populateSelect(items, codeTextArea, withFocus) {
     var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body"));
-    select.position(codeTextArea.position());
+    select.offset({ 
+		top: codeTextArea.offset().top, 
+		left: codeTextArea.offset().left + codeTextArea.width()
+	});
 	
     jQuery.each(items, function () {
         select.get(0).options[select.get(0).options.length] = new Option(this, this);
     });
     select.attr('size', 3).bind('keyup mouseup', function (e) {
         if (e.keyCode == 13 || e.keyCode == 32) {
-            codeTextArea.appendText('.' + jQuery(this).val());  // TODO make this insert at cursor instead of the end of the textarea.val()
+            codeTextArea.appendText(jQuery(this).val());  // TODO make this insert at cursor instead of the end of the textarea.val()
             jQuery(this).remove();
             codeTextArea.focus();
             selectText(codeTextArea, codeTextArea.valLength(), codeTextArea.valLength());
@@ -27,20 +30,6 @@ function populateSelect(items, codeTextArea, withFocus) {
         select.focus();
     }
     
-}
-
-function clearSelectedText() {
-    if (window.getSelection) {
-        if (window.getSelection().empty) {  // Chrome
-            window.getSelection().empty();
-        } 
-        else if (window.getSelection().removeAllRanges) {  // Firefox
-            window.getSelection().removeAllRanges();
-        }
-    } 
-    else if (document.selection) {  // IE
-        document.selection.empty();
-    }
 }
 
 function selectText(element, start, end) {
@@ -192,6 +181,7 @@ function getWord(elem) {
         if (letter.charCodeAt(0) === 32 || letter.charAt(0) === "\n" || letter.charAt(0) === "(" || letter.charAt(0) === ")") {
             break;
         }
+		if (letter.charAt(0) === ".") { continue; }
         temp += letter;
     }
     
@@ -266,13 +256,18 @@ function insertAtCursor(myField, myValue) {
 		});
 		
         this.bind("keyup", function(e) {
+			var self = $(this);
             log('Key ANSII Code: ' + e.keyCode);
             switch (e.keyCode) {
-				case 8:
+				case 8: // Backspace
+				case 13: // Enter
 					e.preventDefault();
 					break;
+				case 190: // Period
+					executeCodeCompletion(self, model, true);
+					break;
 				default:
-					executeCodeCompletion($(this), model);
+					executeCodeCompletion(self, model);
 			}
         });
         
@@ -283,16 +278,10 @@ function insertAtCursor(myField, myValue) {
 			jQuery("#matches").remove();
             
 			switch (e.keyCode) {
-				case 32: // Spacebar
-					selectText(self, self.valLength(), self.valLength());
-					break;
 				case 13: // Enter
-					executeCodeCompletion(self, model);
-					self.appendText(" ");
-					break;
+				case 32: // Spacebar
 				case 190: // Period
 					selectText(self, self.valLength(), self.valLength());
-					executeCodeCompletion(self, model, true);
 					break;
 			}
             
