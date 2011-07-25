@@ -17,19 +17,33 @@ function populateSelect(items, codeTextArea, withFocus) {
     jQuery.each(items, function () {
         select.get(0).options[select.get(0).options.length] = new Option(this, this);
     });
-    select.attr('size', 3).bind('keyup mouseup', function (e) {
-        if (e.keyCode == 13 || e.keyCode == 32) {
-            codeTextArea.appendText(jQuery(this).val());  // TODO make this insert at cursor instead of the end of the textarea.val()
-            jQuery(this).remove();
-            codeTextArea.focus();
-            selectText(codeTextArea, codeTextArea.valLength(), codeTextArea.valLength());
+	
+	select.attr('size', 3).bind('keyup', function (e) {
+		if (e.keyCode == 13 || e.keyCode == 32) {
+			commitSelectOptionToTextElement($(this), codeTextArea);
         }
     });
+	
+	select.bind("change", function() {
+		// TODO need to allow selection for non-datatypes
+		//commitSelectOptionToTextElement($(this), codeTextArea);
+	});
+	
+	select.bind("keydown", function(e) {
+		// Stop backspace from going to previous page in browser history
+		if (e.keyCode === 8) { e.preventDefault(); }
+	});
     
     if (withFocus) {
         select.focus();
     }
     
+}
+
+function commitSelectOptionToTextElement(self, codeTextArea) {
+	self.remove();
+	codeTextArea.appendText(self.val()).focus();
+	selectText(codeTextArea, getCaret(codeTextArea) + self.val().length, getCaret(codeTextArea) + self.val().length); // puts cursor at the end of the selected value
 }
 
 function selectText(element, start, end) {
@@ -56,72 +70,60 @@ function log(message) {
     }
 }
 
-Array.prototype.contains = function (value) {
-    for (var i in this) {
-        if (this[i].type) { // This is to test the dataType array
-            if (this[i].type === value)
-                return true;
-        }
-        else {
-            if (this[i] === value)
-                return true;
-        }
-    }
-    return false;
-}
-
 function replaceTextAndHighlight(self, lastWord, newWord) {
-    var valueLessLastWord = self.val().substring(0, (self.valLength() - lastWord.length));
-    self.appendText(newWord.replace(lastWord, ''));  // TODO make this insert at cursor instead of the end of the textarea.val()
+    self.appendText(newWord.replace(lastWord, ''));
     
-    var start = valueLessLastWord.length + lastWord.length;                                                        // Set start of the highlight
-    var end = self.valLength();                                                                                                    // Set end of the highlight
+	var start = getCaret(self) - (newWord.length - lastWord.length);  // Set start of the highlight
+    var end = start + (newWord.length - lastWord.length);  // Set end of the highlight
     
-    selectText(self, start, end);                                                                                                    // Set the selected text to the remainder of the letters from what was actually input
+    selectText(self, start, end);  // Set the selected text to the remainder of the letters from what was actually input
     return self;
 }
 
 function evaluateTypes(self, lastWord, model) {
     var matches = [];
     
-    for (var i in model.keywords) {
-        var keyword = model.keywords[i];
-        
-        if (typeof keyword.name === 'function') { continue; }
+    jQuery.each(model.keywords, function() {
+		var keyword = this;
+        if (typeof keyword.name === 'function') { return; }
         
         var pattern = new RegExp('^' + lastWord);
         var isMatch = pattern.test(keyword.name);
         
         if (isMatch) {
             // Checks the datatypes for match and then adds the methods to the matches array
-            for (var x in model.dataTypes) {
-                var dataType = model.dataTypes[x];
+            jQuery.each(model.dataTypes, function() {
+                var dataType = this;
                 var isDataTypeMatch = keyword.type === dataType.type;
                 if (isDataTypeMatch) {
-                    for (var y in dataType.methods) {
-                        var method = dataType.methods[y];
-                        if (typeof method === 'function') { continue; }
-                        matches.push(method);
-                    }
+                   jQuery.each(dataType.methods, function() {
+                        var method = this;
+                        if (typeof method === 'function') { return; }
+						var tempObj = new Object();
+						var i = matches.length; 
+						while(i--)
+						{
+							tempObj[matches[i]]='';
+						}
+                        if (!(method in tempObj)) { matches.push(method); }
+                    });
                 }
-            }
+            });
         }
-    }
+    });
     
-    //autoComplete(self, lastWord, matches);
-    
-    if (matches.length > 0) {
-        populateSelect(matches, self, true);
-    }
-    
+	if (matches.length > 0) {
+		populateSelect(matches, self, true);
+	}
+	
     return matches;
 }
 
 function evaluateKeywords(self, lastWord, model) {
     var keywords = [];
-    for (var i in model.keywords) {
-        keywords.push(model.keywords[i].name);
-    }
+    jQuery.each(model.keywords, function() {
+        keywords.push(this.name);
+    });
     
     var matches = autoComplete(self, lastWord, keywords);
     if (matches.length > 1) {
@@ -133,18 +135,17 @@ function evaluateKeywords(self, lastWord, model) {
 }
 
 function autoComplete(self, wordToMatch, keywords) {
-    var matches = [];
-    for (var i in keywords) {
-        var keyword = keywords[i];
-        if (typeof keyword === 'function') { continue; }
+    var matches = new Array();
+    jQuery.each(keywords, function() {
+        if (typeof this === 'function') { return; }
         
         var pattern = new RegExp('^' + wordToMatch);
-        var isMatch = pattern.test(keyword);
+        var isMatch = pattern.test(this);
         
         if (isMatch) {
-            matches.push(keyword);
+            matches.push(this);
         }
-    }
+    });
     
     if (matches.length > 0) {
         replaceTextAndHighlight(self, wordToMatch, matches[0]);
@@ -175,15 +176,16 @@ function getWord(elem) {
     
     // letters will be reversed
     var temp = "";
-    for(var i = location; i >= 0; i--) {
-        var val = elem.val();
+	var i = location; 
+	while (i--) {
+		var val = elem.val();
         var letter = (val.length >= 0) ? val.charAt(i) : 0;
-        if (letter.charCodeAt(0) === 32 || letter.charAt(0) === "\n" || letter.charAt(0) === "(" || letter.charAt(0) === ")") {
+        if (letter.charCodeAt(0) === 32 || letter.charAt(0) === "\n" || letter.charAt(0) === "(") {
             break;
         }
-		if (letter.charAt(0) === ".") { continue; }
+		if (letter.charAt(0) === "." || letter.charAt(0) === ")") { continue; }
         temp += letter;
-    }
+	}
     
     // reverse the letters
     var word = reverseText(temp);
@@ -192,33 +194,30 @@ function getWord(elem) {
 }
 
 function getCaret(elem) { 
-  var el = $(elem).get(0);
+	var el = $(elem).get(0);
   
-  if (el.selectionStart) { 
-    return el.selectionStart; 
-  } else if (document.selection) { 
-    el.focus(); 
-
-    var r = document.selection.createRange(); 
-    if (r == null) { 
-      return 0; 
-    } 
-
-    var re = el.createTextRange(), 
-        rc = re.duplicate(); 
-    re.moveToBookmark(r.getBookmark()); 
-    rc.setEndPoint('EndToStart', re); 
-
-    return rc.text.length; 
-  }  
-  return 0; 
+	if (el.selectionStart) { 
+		return el.selectionStart; 
+	} 
+	else if (document.selection) { 
+		// Set focus on the element
+       el.focus ();
+       // To get cursor position, get empty selection range
+       var oSel = document.selection.createRange ();
+       // Move selection start to 0 position
+       oSel.moveStart ('character', -el.value.length);
+       // The caret position is selection length
+       return oSel.text.length;
+	}  
+	return 0; 
 }
 
 function reverseText(text) {
     var word = "";
-    for(var i = text.length - 1; i > -1; i--) {
-        word += text[i];
-    }
+	var i = text.length;
+	while (i--) {
+		word += text[i];
+	}
     return word;
 }
 
@@ -258,9 +257,17 @@ function insertAtCursor(myField, myValue) {
         this.bind("keyup", function(e) {
 			var self = $(this);
             log('Key ANSII Code: ' + e.keyCode);
-            switch (e.keyCode) {
+			
+			switch (e.keyCode) {
 				case 8: // Backspace
 				case 13: // Enter
+				case 37:  // Left Arrow
+				case 38:  // Top Arrow
+				case 39:  // Right Arrow
+				case 40:  // Bottom Arrow
+				case 16:  // SHIFT
+				case 17:  // ALT
+				case 18:  // CTRL
 					e.preventDefault();
 					break;
 				case 190: // Period
@@ -281,7 +288,7 @@ function insertAtCursor(myField, myValue) {
 				case 13: // Enter
 				case 32: // Spacebar
 				case 190: // Period
-					selectText(self, self.valLength(), self.valLength());
+					self.moveToEndOfSelectedText();
 					break;
 			}
             
@@ -292,11 +299,23 @@ function insertAtCursor(myField, myValue) {
     
     $.fn.appendText = function(text) {
 		insertAtCursor(this.get(0), text);
-		var location = getCaret(this);
-		selectText(this, location + text.length, location + text.length);
+		return this;
     };
     
     $.fn.valLength = function() {
         return this.val().length;
-    }
+    };
+	
+	$.fn.moveToEndOfSelectedText = function() {
+		var el = $(this).get(0);
+		if (el.selectionEnd) { // Chrome
+			el.selectionStart = el.selectionEnd; 
+		} 
+		else if (document.selection) {  // IE
+			var range = document.selection.createRange();
+			range.collapse(false);
+			range.select();
+		}
+		return this;
+	};
 })(jQuery);
