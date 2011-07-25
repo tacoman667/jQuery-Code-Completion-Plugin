@@ -7,6 +7,9 @@
 				width:300px;
 				height:100px;
 			}
+			.codeCompleteEditor {
+				
+			}
 		</style>
 		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
 		<script type="text/javascript" src="jquery.codecomplete.v2.js"></script>
@@ -24,7 +27,8 @@
 				dataType: "jsonp",
 				crossDomain: true,
 				success: function(data) {
-					jQuery("#source").codeComplete(data);
+					//jQuery("#source").codeComplete(data);
+					jQuery("#code").codeComplete(data);
 				},
 				error: function (response) {
 					alert(response.status);
@@ -32,16 +36,27 @@
 			});
 			
 			$(document).ready(function() {
-				jQuery("textarea").width(300).height(300).first().focus();
+				//jQuery("textarea").width(300).height(300).first().focus();
 				//jQuery("#source").codeComplete(model);
+				jQuery("#code").width(300).height(300).first().focus();
+				$("#submit").bind("click", function() {
+					alert($("#code").text());
+				});
+				$("#insert").bind("click", function() {
+					document.execCommand("insertHTML", false, "<select id='matches' style='top:15px'><option>Select One...</option></select>");
+				});
 			});
 			
 		</script>
 	</head>
 
 	<body>
-		<textarea id='source' class="source"></textarea>
+		<!-- <textarea id='source' class="source"></textarea>
 		<div id='trace' />
+		<br/><br/> -->
+		<textarea id="code" class="codeCompleteEditor"></textarea>
+		<input type="button" id="submit" value="See Markup" />
+		<input type="button" id="insert" value="Insert Select" />
 	</body>
 
 </html>

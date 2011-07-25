@@ -8,11 +8,8 @@
 */
 
 function populateSelect(items, codeTextArea, withFocus) {
-    var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body"));
-    select.offset({ 
-		top: codeTextArea.offset().top, 
-		left: codeTextArea.offset().left + codeTextArea.width()
-	});
+    var select = jQuery("<select id='matches'></select>").css("position", "absolute").appendTo(jQuery("body"));
+    positionSelectObject(select, codeTextArea);
 	
     jQuery.each(items, function () {
         select.get(0).options[select.get(0).options.length] = new Option(this, this);
@@ -38,6 +35,30 @@ function populateSelect(items, codeTextArea, withFocus) {
         select.focus();
     }
     
+}
+
+function positionSelectObject(select, codeTextArea) {
+	var range;
+	var left;
+	var top;
+	
+	if (codeTextArea.get(0).createTextRange) {
+		range = document.selection.createRange();
+		var rect = range.getClientRects()[range.getClientRects().length - 1];
+		top = rect.bottom;
+		left = rect.left;
+	}
+	else {
+		range = document.getSelection();
+		left = codeTextArea.offset().left + codeTextArea.width();
+		top = codeTextArea.offset().top;
+	}
+	
+	log('Left: ' + left + ' - Top:' + top);
+	select.offset({ 
+		top: top, 
+		left: left
+	});
 }
 
 function commitSelectOptionToTextElement(self, codeTextArea) {
