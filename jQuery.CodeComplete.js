@@ -8,19 +8,28 @@
 */
 
 function populateSelect(items, codeTextArea, withFocus) {
-    var select = jQuery("<select id='matches'></select>").appendTo(jQuery("body"));
-    
+    var select = jQuery("<select id='matches'></select>").css("position", "absolute").appendTo(jQuery("body"));
+    positionSelectObject(select, codeTextArea);
+	
     jQuery.each(items, function () {
         select.get(0).options[select.get(0).options.length] = new Option(this, this);
     });
-    select.attr('size', 3).bind('keyup', function (e) {
-        if (e.keyCode == 13 || e.keyCode == 32) {
-            codeTextArea.appendText(jQuery(this).val()); // TODO make this insert at cursor instead of the end of the textarea.val()
-            jQuery(this).remove();
-            codeTextArea.focus();
-            selectText(codeTextArea, codeTextArea.valLength(), codeTextArea.valLength());
+	
+	select.attr('size', 3).bind('keyup', function (e) {
+		if (e.keyCode == 13 || e.keyCode == 32) {
+			commitSelectOptionToTextElement($(this), codeTextArea);
         }
     });
+	
+	select.bind("change", function() {
+		// TODO need to allow selection for non-datatypes
+		//commitSelectOptionToTextElement($(this), codeTextArea);
+	});
+	
+	select.bind("keydown", function(e) {
+		// Stop backspace from going to previous page in browser history
+		if (e.keyCode === 8) { e.preventDefault(); }
+	});
     
     if (withFocus) {
         select.focus();
@@ -28,18 +37,34 @@ function populateSelect(items, codeTextArea, withFocus) {
     
 }
 
-function clearSelectedText() {
-    if (window.getSelection) {
-        if (window.getSelection().empty) {  // Chrome
-            window.getSelection().empty();
-        } 
-        else if (window.getSelection().removeAllRanges) {  // Firefox
-            window.getSelection().removeAllRanges();
-        }
-    } 
-    else if (document.selection) {  // IE
-        document.selection.empty();
-    }
+function positionSelectObject(select, codeTextArea) {
+	var range;
+	var left;
+	var top;
+	
+	if (codeTextArea.get(0).createTextRange) {
+		range = document.selection.createRange();
+		var rect = range.getClientRects()[range.getClientRects().length - 1];
+		top = rect.bottom;
+		left = rect.left;
+	}
+	else {
+		range = document.getSelection();
+		left = codeTextArea.offset().left + codeTextArea.width();
+		top = codeTextArea.offset().top;
+	}
+	
+	log('Left: ' + left + ' - Top:' + top);
+	select.offset({ 
+		top: top, 
+		left: left
+	});
+}
+
+function commitSelectOptionToTextElement(self, codeTextArea) {
+	self.remove();
+	codeTextArea.appendText(self.val()).focus();
+	selectText(codeTextArea, getCaret(codeTextArea) + self.val().length, getCaret(codeTextArea) + self.val().length); // puts cursor at the end of the selected value
 }
 
 function selectText(element, start, end) {
@@ -62,104 +87,86 @@ function selectText(element, start, end) {
 function log(message) {
     "use strict";
     if (console) {
-        //console.log(message);
+        console.log(message);
     }
-}
-
-Array.prototype.contains = function (value) {
-    for (var i in this) {
-        if (this[i].type) { // This is to test the dataType array
-            if (this[i].type === value)
-                return true;
-        }
-        else {
-            if (this[i] === value)
-                return true;
-        }
-    }
-    return false;
 }
 
 function replaceTextAndHighlight(self, lastWord, newWord) {
-    var valueLessLastWord = self.val().substring(0, (self.valLength() - lastWord.length));
-    self.val(valueLessLastWord + newWord);  // TODO make this insert at cursor instead of the end of the textarea.val()
+    self.appendText(newWord.replace(lastWord, ''));
     
-    var start = valueLessLastWord.length + lastWord.length;                                                        // Set start of the highlight
-    var end = self.valLength();                                                                                                    // Set end of the highlight
+	var start = getCaret(self) - (newWord.length - lastWord.length);  // Set start of the highlight
+    var end = start + (newWord.length - lastWord.length);  // Set end of the highlight
     
-    selectText(self, start, end);                                                                                                    // Set the selected text to the remainder of the letters from what was actually input
+    selectText(self, start, end);  // Set the selected text to the remainder of the letters from what was actually input
     return self;
 }
 
 function evaluateTypes(self, lastWord, model) {
     var matches = [];
     
-    for (var i in model.keywords) {
-        var keyword = model.keywords[i];
-        
-        log('Keyword to be evaluated: ' + keyword.name);
-        if (typeof keyword.name === 'function') { continue; }
+    jQuery.each(model.keywords, function() {
+		var keyword = this;
+        if (typeof keyword.name === 'function') { return; }
         
         var pattern = new RegExp('^' + lastWord);
         var isMatch = pattern.test(keyword.name);
         
         if (isMatch) {
             // Checks the datatypes for match and then adds the methods to the matches array
-            for (var x in model.dataTypes) {
-                var dataType = model.dataTypes[x];
+            jQuery.each(model.dataTypes, function() {
+                var dataType = this;
                 var isDataTypeMatch = keyword.type === dataType.type;
                 if (isDataTypeMatch) {
-                    for (var y in dataType.methods) {
-                        var method = dataType.methods[y];
-                        if (typeof method === 'function') { continue; }
-                        matches.push(method);
-                    }
+                   jQuery.each(dataType.methods, function() {
+                        var method = this;
+                        if (typeof method === 'function') { return; }
+						var tempObj = new Object();
+						var i = matches.length; 
+						while(i--)
+						{
+							tempObj[matches[i]]='';
+						}
+                        if (!(method in tempObj)) { matches.push(method); }
+                    });
                 }
-            }
+            });
         }
-    }
+    });
     
-    //autoComplete(self, lastWord, matches);
-    
-    if (matches.length > 0) {
-        populateSelect(matches, self, true);
-    }
-    
+	if (matches.length > 0) {
+		populateSelect(matches, self, true);
+	}
+	
     return matches;
 }
 
 function evaluateKeywords(self, lastWord, model) {
-    log('evaluateKeywords method was executed.');
-    
     var keywords = [];
-    for (var i in model.keywords) {
-        keywords.push(model.keywords[i].name);
-    }
+    jQuery.each(model.keywords, function() {
+        keywords.push(this.name);
+    });
     
     var matches = autoComplete(self, lastWord, keywords);
     if (matches.length > 1) {
         // TODO
-        //populateSelect(matches, self, false);
+        populateSelect(matches, self, false);
     }
     
     return self;
 }
 
 function autoComplete(self, wordToMatch, keywords) {
-    var matches = [];
-    for (var i in keywords) {
-        var keyword = keywords[i];
-        
-        log('Keyword to be evaluated: ' + keyword);
-        if (typeof keyword === 'function') { continue; }
+    var matches = new Array();
+    jQuery.each(keywords, function() {
+        if (typeof this === 'function') { return; }
         
         var pattern = new RegExp('^' + wordToMatch);
-        var isMatch = pattern.test(keyword);
+        var isMatch = pattern.test(this);
         
         if (isMatch) {
-            matches.push(keyword);
+            matches.push(this);
         }
-    }
+    });
     
     if (matches.length > 0) {
         replaceTextAndHighlight(self, wordToMatch, matches[0]);
@@ -169,9 +176,8 @@ function autoComplete(self, wordToMatch, keywords) {
 }
 
 function executeCodeCompletion(self, model, forDataTypes) {
-    var lastWord = getWord(self);
-    log('Last Word: ' + lastWord);
-    
+    var lastWord = getWord(self)
+	
     // Doesn't evaluate keywords on a space
     if (lastWord.length === 0) { return self;    }
     
@@ -180,10 +186,7 @@ function executeCodeCompletion(self, model, forDataTypes) {
         evaluateKeywords(self, lastWord, model);
     }
     else {
-        // if returning matches length is greater then 0 then add the period
-        if (evaluateTypes(self, lastWord, model).length > 0) {
-            self.appendText('.');   // TODO make this insert at cursor instead of the end of the textarea.val()
-        }
+		evaluateTypes(self, lastWord, model);
     }
     
     return self;
@@ -194,14 +197,16 @@ function getWord(elem) {
     
     // letters will be reversed
     var temp = "";
-    for(var i = location; i >= 0; i--) {
-        var val = elem.val();
+	var i = location; 
+	while (i--) {
+		var val = elem.val();
         var letter = (val.length >= 0) ? val.charAt(i) : 0;
         if (letter.charCodeAt(0) === 32 || letter.charAt(0) === "\n" || letter.charAt(0) === "(") {
             break;
         }
+		if (letter.charAt(0) === "." || letter.charAt(0) === ")") { continue; }
         temp += letter;
-    }
+	}
     
     // reverse the letters
     var word = reverseText(temp);
@@ -210,33 +215,30 @@ function getWord(elem) {
 }
 
 function getCaret(elem) { 
-  var el = $(elem).get(0);
+	var el = $(elem).get(0);
   
-  if (el.selectionStart) { 
-    return el.selectionStart; 
-  } else if (document.selection) { 
-    el.focus(); 
-
-    var r = document.selection.createRange(); 
-    if (r == null) { 
-      return 0; 
-    } 
-
-    var re = el.createTextRange(), 
-        rc = re.duplicate(); 
-    re.moveToBookmark(r.getBookmark()); 
-    rc.setEndPoint('EndToStart', re); 
-
-    return rc.text.length; 
-  }  
-  return 0; 
+	if (el.selectionStart) { 
+		return el.selectionStart; 
+	} 
+	else if (document.selection) { 
+		// Set focus on the element
+       el.focus ();
+       // To get cursor position, get empty selection range
+       var oSel = document.selection.createRange ();
+       // Move selection start to 0 position
+       oSel.moveStart ('character', -el.value.length);
+       // The caret position is selection length
+       return oSel.text.length;
+	}  
+	return 0; 
 }
 
 function reverseText(text) {
     var word = "";
-    for(var i = text.length - 1; i > -1; i--) {
-        word += text[i];
-    }
+	var i = text.length;
+	while (i--) {
+		word += text[i];
+	}
     return word;
 }
 
@@ -267,42 +269,49 @@ function insertAtCursor(myField, myValue) {
             //dataTypes: [ { type: 'string', methods: [ 'tostring', 'toupper', 'tolower' ] }, { type: 'int32', methods: [ 'tostring' ] } ]
         }, model);
         
+		// Sort all the keyword names ascending
         model.keywords.sort(function(a, b) { 
 			if (a.name === b.name) { return 0; }
 			return (a.name < b.name) ? -1 : 1; 
 		});
 		
-        this.data("model", model);
-        
         this.bind("keyup", function(e) {
+			var self = $(this);
             log('Key ANSII Code: ' + e.keyCode);
-            if (e.keyCode === 8) { return this; }
-            
-            return executeCodeCompletion($(this), model);
+			
+			switch (e.keyCode) {
+				case 8: // Backspace
+				case 13: // Enter
+				case 37:  // Left Arrow
+				case 38:  // Top Arrow
+				case 39:  // Right Arrow
+				case 40:  // Bottom Arrow
+				case 16:  // SHIFT
+				case 17:  // ALT
+				case 18:  // CTRL
+					e.preventDefault();
+					break;
+				case 190: // Period
+					executeCodeCompletion(self, model, true);
+					break;
+				default:
+					executeCodeCompletion(self, model);
+			}
         });
         
         this.bind('keydown', function(e) {
             var self = $(this);
+			
+			// Removes dropdown if present
+			jQuery("#matches").remove();
             
-            // SpaceBar
-            if (e.keyCode === 32) {
-                log('Spacebar was pressed');
-                selectText(self, self.valLength(), self.valLength());
-            }
-            
-            // Enter
-            if (e.keyCode === 13) {
-                log('Enter was pressed');
-                executeCodeCompletion($(this), model);
-                $(this).appendText(" ");   // TODO make this insert at cursor instead of the end of the textarea.val()
-            }
-            
-            // Period
-            if (e.keyCode === 190) {
-                log('Period was pressed');
-                selectText(self, self.valLength(), self.valLength());
-                executeCodeCompletion($(this), model, true);
-            }
+			switch (e.keyCode) {
+				case 13: // Enter
+				case 32: // Spacebar
+				case 190: // Period
+					self.moveToEndOfSelectedText();
+					break;
+			}
             
         });
         
@@ -310,16 +319,24 @@ function insertAtCursor(myField, myValue) {
     };
     
     $.fn.appendText = function(text) {
-		/*var location = getCaret(this);
-		var word = getWord(this);*/
-        this.val(function(index, value) {
-            return value + text;
-        });
-		/*clearSelectedText(this);
-		insertAtCursor(this.get(0), text);*/
+		insertAtCursor(this.get(0), text);
+		return this;
     };
     
     $.fn.valLength = function() {
         return this.val().length;
-    }
+    };
+	
+	$.fn.moveToEndOfSelectedText = function() {
+		var el = $(this).get(0);
+		if (el.selectionEnd) { // Chrome
+			el.selectionStart = el.selectionEnd; 
+		} 
+		else if (document.selection) {  // IE
+			var range = document.selection.createRange();
+			range.collapse(false);
+			range.select();
+		}
+		return this;
+	};
 })(jQuery);
