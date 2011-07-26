@@ -49,7 +49,7 @@ function positionSelectObject(select, codeTextArea) {
 		left = rect.left;
 	}
 	else {
-		range = document.getSelection();
+		range = window.getSelection();
 		left = codeTextArea.offset().left + codeTextArea.width();
 		top = codeTextArea.offset().top;
 	}
@@ -86,9 +86,7 @@ function selectText(element, start, end) {
 
 function log(message) {
     "use strict";
-    if (console) {
-        console.log(message);
-    }
+    window.console && console.log && console.log(message);
 }
 
 function replaceTextAndHighlight(self, lastWord, newWord) {
@@ -107,6 +105,7 @@ function evaluateTypes(self, lastWord, model) {
     jQuery.each(model.keywords, function() {
 		var keyword = this;
         if (typeof keyword.name === 'function') { return; }
+		if (keyword.name.charAt(0) !== lastWord.charAt(0)) { return; }
         
         var pattern = new RegExp('^' + lastWord);
         var isMatch = pattern.test(keyword.name);
@@ -143,6 +142,7 @@ function evaluateTypes(self, lastWord, model) {
 function evaluateKeywords(self, lastWord, model) {
     var keywords = [];
     jQuery.each(model.keywords, function() {
+		if (this.name.charAt(0) !== lastWord.charAt(0)) { return; }
         keywords.push(this.name);
     });
     
@@ -159,7 +159,7 @@ function autoComplete(self, wordToMatch, keywords) {
     var matches = new Array();
     jQuery.each(keywords, function() {
         if (typeof this === 'function') { return; }
-        
+		
         var pattern = new RegExp('^' + wordToMatch);
         var isMatch = pattern.test(this);
         
@@ -195,6 +195,10 @@ function executeCodeCompletion(self, model, forDataTypes) {
 function getWord(elem) {
     var location = getCaret(elem);
     
+	// If the next letter after the caret is alphanumeric, do not return the word so that autocomplete doesn't fire.
+	var nextLetter = elem.val().charAt(location + 1);
+	if (/[a-zA-Z0-9]/.test(nextLetter)) { return ''; }
+	
     // letters will be reversed
     var temp = "";
 	var i = location; 

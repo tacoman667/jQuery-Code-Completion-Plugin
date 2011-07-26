@@ -45,7 +45,14 @@
 				$("#insert").bind("click", function() {
 					document.execCommand("insertHTML", false, "<select id='matches' style='top:15px'><option>Select One...</option></select>");
 				});
+				
+				if (window.localStorage)
+					log("localStorage Available!");
+				else
+				log("localStorage Not Available.");
 			});
+			
+
 			
 		</script>
 	</head>
